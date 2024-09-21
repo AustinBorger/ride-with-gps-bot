@@ -2,23 +2,64 @@ import 'dotenv/config';
 import express from 'express';
 import {
   InteractionType,
+  InteractionResponseFlags,
   InteractionResponseType,
   verifyKeyMiddleware,
 } from 'discord-interactions';
+import pkg from 'discord.js';
+const discord = pkg;
 import { getRandomEmoji } from './utils.js';
+import './commands.js';
+import crypto from 'crypto';
+import session from 'express-session';
+import http from 'http';
+import https from 'https';
 
 // Create an express app
 const app = express();
 // Get port, or default to 3000
 const PORT = process.env.PORT || 3000;
 
+const client = new discord.Client({ 
+  intents: [
+    discord.GatewayIntentBits.DirectMessages
+  ],
+});
+
+client.login(process.env.DISCORD_TOKEN);
+
+// Ride with GPS API key
+const RWG_KEY = process.env.RWG_KEY;
+const RWG_CLIENTID = process.env.RWG_CLIENTID;
+const RWG_SECRET = process.env.RWG_SECRET;
+
+const ROUTE_INTERACTIONS = "/interactions";
+const ROUTE_LOGIN = "/login";
+const ROUTE_REDIRECT = "/redirect";
+
+var login_token_to_user = {};
+var user_to_oauth = {};
+
+var session_secret = crypto.randomBytes(32).toString('hex');
+app.use(session({
+  secret: session_secret,
+  resave: false,
+  saveUninitialized: true,
+}));
+
+function get_redirect_uri(req) {
+  return req.protocol + '://' + req.hostname + ROUTE_REDIRECT;
+}
+
 /**
  * Interactions endpoint URL where Discord will send HTTP requests
  * Parse request body and verifies incoming requests using discord-interactions package
  */
-app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
+app.post(ROUTE_INTERACTIONS, verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
   // Interaction type and data
-  const { type, data } = req.body;
+  const { type, data, context } = req.body;
+
+  const userId = context === 0 ? req.body.member.user.id : req.body.user.id;
 
   /**
    * Handle verification requests
@@ -32,26 +73,130 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
    * See https://discord.com/developers/docs/interactions/application-commands#slash-commands
    */
   if (type === InteractionType.APPLICATION_COMMAND) {
-    const { name } = data;
+    const { name, options } = data;
 
     // "test" command
-    if (name === 'test') {
-      // Send a message into the channel where command was triggered from
+    if (name === 'route') {
+      const route = typeof(options) != "undefined" ? options[0].value : "44089072";
+
+      const get_options = {
+        hostname: "ridewithgps.com",
+        path: "/routes/" + route + ".json",
+        method: "GET",
+      };
+
+      const my_req = https.request(get_options, (rwg_res) => {
+        var data = '';
+      
+        rwg_res.on("data", (chunk) => {
+          if (rwg_res.statusCode === 200) {
+            data += chunk;
+          }
+        });
+
+        rwg_res.on("end", () => {
+          const { course_points } = JSON.parse(data);
+
+          var content = "";
+          course_points.forEach((item, _) => {
+            content += "- " + item["n"] + "\n";
+          });
+
+          res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: content,
+              flags: InteractionResponseFlags.EPHEMERAL,
+            },
+          });
+        })
+      });
+
+      my_req.end();
+    } else if (name === 'login') {
+      const token = crypto.randomBytes(32).toString('hex');
+      login_token_to_user[token] = userId;
+      const url = req.protocol + '://' + req.hostname + ROUTE_LOGIN + "/" + token;
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          // Fetches a random emoji to send from a helper function
-          content: `hello world ${getRandomEmoji()}`,
+          content: 'Login here: ' + url,
+          flags: InteractionResponseFlags.EPHEMERAL,
         },
       });
+    } else {
+      console.error(`unknown command: ${name}`);
+      return res.status(400).json({ error: 'unknown command' });
     }
+  } else {
+    console.error('unknown interaction type', type);
+    return res.status(400).json({ error: 'unknown interaction type' });
+  }
+});
 
-    console.error(`unknown command: ${name}`);
-    return res.status(400).json({ error: 'unknown command' });
+app.get(ROUTE_LOGIN + "/:token", async function (req, res) {
+  const token = req.params.token;
+
+  if (!login_token_to_user.hasOwnProperty(token)) {
+    return res.status(400).json({ error: 'expired token' });
   }
 
-  console.error('unknown interaction type', type);
-  return res.status(400).json({ error: 'unknown interaction type' });
+  req.session.token = token;
+
+  const redirect_uri = get_redirect_uri(req);
+
+  const url = "https://ridewithgps.com" + "/oauth/authorize?client_id=" + RWG_CLIENTID + "&redirect_uri=" + redirect_uri + "&response_type=code";
+  return res.redirect(url);
+});
+
+app.get(ROUTE_REDIRECT, async function (req, res) {
+  const access_grant = req.query.code;
+  const token = req.session.token;
+  const user_id = login_token_to_user[token];
+
+  const redirect_uri = get_redirect_uri(req);
+
+  const postData = JSON.stringify({
+    grant_type: "authorization_code",
+    code: access_grant,
+    client_id: RWG_CLIENTID,
+    client_secret: RWG_SECRET,
+    redirect_uri: redirect_uri,
+  });
+
+  const options = {
+    hostname: "ridewithgps.com",
+    path: "/oauth/token.json",
+    method: "POST",
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': postData.length
+    },
+  };
+
+  const my_req = https.request(options, (rwg_res) => {
+    if (rwg_res.statusCode != 200) {
+      res.json({ code: rwg_res.statusCode, message: rwg_res.statusMessage });
+    }
+
+    rwg_res.on("data", (data) => {
+      if (rwg_res.statusCode === 200) {
+        const { access_token } = JSON.parse(data);
+        user_to_oauth[user_id] = access_token;
+        res.json({ message: "success!" });
+        const user = client.users.fetch(user_id, false).then((user) => {
+          user.send("You are logged in!");
+        });
+      }
+    });
+  });
+
+  my_req.on("error", (error) => {
+    console.log(error);
+  });
+
+  my_req.write(postData);
+  my_req.end();
 });
 
 app.listen(PORT, () => {
