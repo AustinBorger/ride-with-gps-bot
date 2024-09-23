@@ -139,7 +139,7 @@ app.post(ROUTE_INTERACTIONS, verifyKeyMiddleware(process.env.PUBLIC_KEY), async 
   if (type === InteractionType.APPLICATION_COMMAND) {
     const { name, options } = data;
 
-    if (name === 'route') {
+    if (name === 'next_route') {
       routeTable.getNextRoute((err, row) => {
         if (err) {
           reply_message(res, `Error retrieving route: ${err}`);

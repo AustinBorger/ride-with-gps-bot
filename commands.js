@@ -12,19 +12,12 @@ const LOGIN_COMMAND = {
   contexts: GUILD_ONLY_CONTEXT,
 };
 
-const ROUTE_COMMAND = {
-  name: 'route',
-  description: 'Displays information about a route',
+const NEXT_ROUTE_COMMAND = {
+  name: 'next_route',
+  description: 'Provides a link to the upcoming route.',
   type: 1,
   integration_types: GUILD_ONLY_INTEGRATION,
   contexts: GUILD_ONLY_CONTEXT,
-  options: [
-    {
-      type: 3,
-      name: "route_id",
-      description: "The ID of the route.",
-    },
-  ],
 };
 
 const ADD_ROUTE_COMMAND = {
@@ -65,6 +58,6 @@ const UNDO_COMMAND = {
   contexts: GUILD_ONLY_CONTEXT, // Guild only
 };
 
-const ALL_COMMANDS = [ROUTE_COMMAND, ADD_ROUTE_COMMAND, ALL_ROUTES_COMMAND, UNDO_COMMAND];
+const ALL_COMMANDS = [NEXT_ROUTE_COMMAND, ADD_ROUTE_COMMAND, ALL_ROUTES_COMMAND, UNDO_COMMAND];
 
 InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS);
