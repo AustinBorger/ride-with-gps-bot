@@ -33,6 +33,8 @@ const RWG_KEY = process.env.RWG_KEY;
 const RWG_CLIENTID = process.env.RWG_CLIENTID;
 const RWG_SECRET = process.env.RWG_SECRET;
 
+const GUILD_ID = process.env.GUILD_ID;
+
 const ROUTE_INTERACTIONS = "/interactions";
 const ROUTE_LOGIN = "/login";
 const ROUTE_REDIRECT = "/redirect";
@@ -99,6 +101,11 @@ function get_route(route, arg, res, callback) {
   my_req.end();
 }
 
+function reply_error(res, msg) {
+  console.log(msg);
+  reply_message(res, msg);
+}
+
 /**
  * Interactions endpoint URL where Discord will send HTTP requests
  * Parse request body and verifies incoming requests using discord-interactions package
@@ -107,7 +114,16 @@ app.post(ROUTE_INTERACTIONS, verifyKeyMiddleware(process.env.PUBLIC_KEY), async 
   // Interaction type and data
   const { type, data, context } = req.body;
 
-  const userId = context === 0 ? req.body.member.user.id : req.body.user.id;
+  if (context !== 0) {
+    return reply_message(res, "Unexpected command context.");
+  }
+
+  const guildId = req.body.guild_id;
+  if (guildId !== GUILD_ID) {
+    return reply_message(res, "Unauthorized guild.");
+  }
+
+  const userId = req.body.member.user.id;
 
   /**
    * Handle verification requests
@@ -137,13 +153,7 @@ app.post(ROUTE_INTERACTIONS, verifyKeyMiddleware(process.env.PUBLIC_KEY), async 
       const token = crypto.randomBytes(32).toString('hex');
       login_token_to_user[token] = userId;
       const url = req.protocol + '://' + req.hostname + ROUTE_LOGIN + "/" + token;
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: 'Login here: ' + url,
-          flags: InteractionResponseFlags.EPHEMERAL,
-        },
-      });
+      return reply_message(res, 'Login here: ' + url);
     } else if (name === 'add_route') {
       const route_arg = options[0].value;
       const date_arg = options[1].value;
@@ -162,8 +172,7 @@ app.post(ROUTE_INTERACTIONS, verifyKeyMiddleware(process.env.PUBLIC_KEY), async 
         routeTable.addRoute(userId, route, date, (err) => {
           if (err) {
             const msg = `Failed to add route: ${err}`;
-            console.log(msg);
-            reply_message(res, msg);
+            reply_error(res, msg);
           } else {
             const msg = `Added route ${route}, ${date.toISOString()}`;
             console.log(msg);
@@ -173,13 +182,14 @@ app.post(ROUTE_INTERACTIONS, verifyKeyMiddleware(process.env.PUBLIC_KEY), async 
       });
     } else if (name === 'all_routes') {
       routeTable.getAllRoutes((err, rows) => {
-        if (rows) {
+        if (err) {
+          const msg = `Failed to get all routes: ${err}`;
+          reply_error(res, msg);
+        } else if (rows) {
           var content = "";
-          console.log(rows);
           rows.forEach((row) => {
             content += `${row[0]}, ${row[1]}\n`;
           });
-          console.log(content);
           reply_message(res, content);
         } else {
           reply_message(res, "Empty database.");
@@ -189,8 +199,7 @@ app.post(ROUTE_INTERACTIONS, verifyKeyMiddleware(process.env.PUBLIC_KEY), async 
       routeTable.undo(userId, (err, row) => {
         if (err) {
           const msg = `Failed to undo: ${err}`;
-          console.log(msg);
-          reply_message(res, msg);
+          reply_error(res, msg);
         } else if (row) {
           reply_message(res, `Deleted route: ${row.join(', ')}`);
         } else {
