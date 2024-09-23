@@ -8,8 +8,6 @@ import {
 } from 'discord-interactions';
 import pkg from 'discord.js';
 const discord = pkg;
-import { getRandomEmoji } from './utils.js';
-import './commands.js';
 import './data.js';
 import crypto from 'crypto';
 import session from 'express-session';
