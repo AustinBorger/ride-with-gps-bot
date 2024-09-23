@@ -144,7 +144,7 @@ app.post(ROUTE_INTERACTIONS, verifyKeyMiddleware(process.env.PUBLIC_KEY), async 
           flags: InteractionResponseFlags.EPHEMERAL,
         },
       });
-    } else if (name === 'set_route') {
+    } else if (name === 'add_route') {
       const route_arg = options[0].value;
       const date_arg = options[1].value;
       const route = routeTable.parseRoute(route_arg);
@@ -159,7 +159,7 @@ app.post(ROUTE_INTERACTIONS, verifyKeyMiddleware(process.env.PUBLIC_KEY), async 
 
       // Check that the route exists in Ride with GPS
       get_route(route, route_arg, res, (_) => {
-        routeTable.addRoute(route, date, (err) => {
+        routeTable.addRoute(userId, route, date, (err) => {
           if (err) {
             const msg = `Failed to add route: ${err}`;
             console.log(msg);
@@ -183,6 +183,18 @@ app.post(ROUTE_INTERACTIONS, verifyKeyMiddleware(process.env.PUBLIC_KEY), async 
           reply_message(res, content);
         } else {
           reply_message(res, "Empty database.");
+        }
+      });
+    } else if (name === 'undo') {
+      routeTable.undo(userId, (err, row) => {
+        if (err) {
+          const msg = `Failed to undo: ${err}`;
+          console.log(msg);
+          reply_message(res, msg);
+        } else if (row) {
+          reply_message(res, `Deleted route: ${row.join(', ')}`);
+        } else {
+          reply_message(res, 'No action to undo.');
         }
       });
     } else {

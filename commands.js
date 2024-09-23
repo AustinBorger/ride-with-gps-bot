@@ -24,9 +24,9 @@ const ROUTE_COMMAND = {
   ],
 };
 
-const SET_ROUTE_COMMAND = {
-  name: "set_route",
-  description: "Sets the upcoming training route",
+const ADD_ROUTE_COMMAND = {
+  name: "add_route",
+  description: "Adds an upcoming training route",
   type: 1,
   integration_types: [0, 1],
   contexts: [0, 1, 2],
@@ -54,6 +54,14 @@ const ALL_ROUTES_COMMAND = {
   contexts: [0, 1, 2],
 };
 
-const ALL_COMMANDS = [ROUTE_COMMAND, SET_ROUTE_COMMAND, ALL_ROUTES_COMMAND];
+const UNDO_COMMAND = {
+  name: "undo",
+  description: "Reverts the last admin command.",
+  type: 1,
+  integration_types: [0, 1],
+  contexts: [0, 1, 2],
+};
+
+const ALL_COMMANDS = [ROUTE_COMMAND, ADD_ROUTE_COMMAND, ALL_ROUTES_COMMAND, UNDO_COMMAND];
 
 InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS);

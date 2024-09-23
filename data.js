@@ -31,12 +31,18 @@ class Table {
 }
 
 class Route extends Table {
-  static get KeyId() { return "id"; }
-  static get KeyRouteId() { return "route_id"; }
-  static get KeyDate() { return "date"; }
+  static get KeyId() { return "id"; } // Primary key
+  static get KeyRouteId() { return "route_id"; } // Ride with GPS route id of the route
+  static get KeyDate() { return "date"; } // Date with time of the training ride
+  static get KeyUserId() { return "user_id"; } // The user_id that added the route
 
   constructor() {
-    super("route", [`${Route.KeyId} INTEGER PRIMARY KEY AUTOINCREMENT`, `${Route.KeyRouteId} INTEGER`, `${Route.KeyDate} TEXT`]);
+    super("route", [
+      `${Route.KeyId} INTEGER PRIMARY KEY AUTOINCREMENT`,
+      `${Route.KeyRouteId} INTEGER`,
+      `${Route.KeyDate} TEXT`,
+      `${Route.KeyUserId} INTEGER`,
+    ]);
   }
 
   parseRoute(url_or_route_id) {
@@ -58,13 +64,14 @@ class Route extends Table {
     return route_id;
   }
 
-  addRoute(route_id, date, callback) {
-    this.addRow([Route.KeyRouteId, Route.KeyDate], [route_id, date.toISOString()], callback);
+  addRoute(user_id, route_id, date, callback) {
+    this.addRow([Route.KeyUserId, Route.KeyRouteId, Route.KeyDate], [user_id, route_id, date.toISOString()], callback);
   }
 
   getNextRoute(callback) {
+    const columns = [Route.KeyRouteId, Route.KeyDate];
     const currentDate = new Date().toISOString();
-    const sql = `SELECT ${Route.KeyRouteId}, ${Route.KeyDate} FROM ${this.name} WHERE ${Route.KeyDate} > ? ORDER BY ${Route.KeyDate} ASC LIMIT 1`;
+    const sql = `SELECT ${columns.join(', ')} FROM ${this.name} WHERE ${Route.KeyDate} > ? ORDER BY ${Route.KeyDate} ASC LIMIT 1`;
     db.all(sql, [currentDate], (err, rows) => {
       if (err) {
         callback(err, null);
@@ -80,7 +87,8 @@ class Route extends Table {
   }
 
   getAllRoutes(callback) {
-    const sql = `SELECT ${Route.KeyRouteId}, ${Route.KeyDate} FROM ${this.name} ORDER BY ${Route.KeyDate} ASC`;
+    const columns = [Route.KeyRouteId, Route.KeyDate];
+    const sql = `SELECT ${columns.join(', ')} FROM ${this.name} ORDER BY ${Route.KeyDate} ASC`;
     db.all(sql, (err, rows) => {
       if (err) {
         callback(err, null);
@@ -97,6 +105,28 @@ class Route extends Table {
         }
       }
     })
+  }
+
+  undo(user_id, callback) {
+    const columns = [Route.KeyId, Route.KeyRouteId, Route.KeyDate];
+    var sql = `SELECT ${columns.join(', ')} FROM ${this.name} WHERE ${Route.KeyUserId} = ? ORDER BY ${Route.KeyId} LIMIT 1`;
+    db.all(sql, [user_id], (err, rows) => {
+      if (err) {
+        callback(err, null);
+      } else if (rows && rows.length > 0) {
+        const values = Object.values(rows[0]);
+        sql = `DELETE FROM ${this.name} WHERE ${Route.KeyId} = ?`;
+        db.run(sql, [values[0]], (err) => {
+          if (err) {
+            callback(err, null);
+          } else {
+            callback(err, [values[1], values[2]]);
+          }
+        });
+      } else {
+        callback(err, null);
+      }
+    });
   }
 };
 
