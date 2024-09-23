@@ -1,23 +1,15 @@
-# Getting Started app for Discord
+# Ride with GPS app for Discord
 
-This project contains a basic rock-paper-scissors-style Discord app written in JavaScript, built for the [getting started guide](https://discord.com/developers/docs/getting-started).
-
-![Demo of app](https://github.com/discord/discord-example-app/raw/main/assets/getting-started-demo.gif?raw=true)
+This project contains a Discord app written in JavaScript, built for interacting with [Ride with GPS](https://ridewithgps.com/).
 
 ## Project structure
 Below is a basic overview of the project structure:
 
 ```
-├── examples    -> short, feature-specific sample apps
-│   ├── app.js  -> finished app.js code
-│   ├── button.js
-│   ├── command.js
-│   ├── modal.js
-│   ├── selectMenu.js
 ├── .env.sample -> sample .env file
 ├── app.js      -> main entrypoint for app
 ├── commands.js -> slash command payloads + helpers
-├── game.js     -> logic specific to RPS
+├── data.js     -> SQLite database wrapper
 ├── utils.js    -> utility functions and enums
 ├── package.json
 ├── README.md
@@ -37,21 +29,17 @@ Configuring the app is covered in detail in the [getting started guide](https://
 
 First clone the project:
 ```
-git clone https://github.com/discord/discord-example-app.git
+git clone https://github.com/AustinBorger/ride-with-gps-bot.git
 ```
 
 Then navigate to its directory and install dependencies:
 ```
-cd discord-example-app
+cd ride-with-gps-bot
 npm install
 ```
 ### Get app credentials
 
-Fetch the credentials from your app's settings and add them to a `.env` file (see `.env.sample` for an example). You'll need your app ID (`APP_ID`), bot token (`DISCORD_TOKEN`), and public key (`PUBLIC_KEY`).
-
-Fetching credentials is covered in detail in the [getting started guide](https://discord.com/developers/docs/getting-started).
-
-> 🔑 Environment variables can be added to the `.env` file in Glitch or when developing locally, and in the Secrets tab in Replit (the lock icon on the left).
+Fetch the credentials from your app's settings and add them to a `.env` file (see `.env.sample` for an example). You'll need your app ID (`APP_ID`), bot token (`DISCORD_TOKEN`), and public key (`PUBLIC_KEY`). You'll also need a Ride with GPS API key and (optional, for queries that require login) a clientid / client secret for OAuth.
 
 ### Install slash commands
 
@@ -68,10 +56,6 @@ After your credentials are added, go ahead and run the app:
 ```
 node app.js
 ```
-
-> ⚙️ A package [like `nodemon`](https://github.com/remy/nodemon), which watches for local changes and restarts your app, may be helpful while locally developing.
-
-If you aren't following the [getting started guide](https://discord.com/developers/docs/getting-started), you can move the contents of `examples/app.js` (the finished `app.js` file) to the top-level `app.js`.
 
 ### Set up interactivity
 
@@ -106,3 +90,4 @@ Click **Save Changes**, and your app should be ready to run 🚀
 - Browse the `examples/` folder in this project for smaller, feature-specific code examples
 - Join the **[Discord Developers server](https://discord.gg/discord-developers)** to ask questions about the API, attend events hosted by the Discord API team, and interact with other devs.
 - Check out **[community resources](https://discord.com/developers/docs/topics/community-resources#community-resources)** for language-specific tools maintained by community members.
+- Read **[the Ride with GPS API documentation](https://ridewithgps.com/api)** for information about the underlying queries.
