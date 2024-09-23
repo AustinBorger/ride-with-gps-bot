@@ -8,8 +8,8 @@ const LOGIN_COMMAND = {
   name: 'login',
   description: 'Log in to Ride With GPS',
   type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 1, 2],
+  integration_types: GUILD_ONLY_INTEGRATION,
+  contexts: GUILD_ONLY_CONTEXT,
 };
 
 const ROUTE_COMMAND = {
