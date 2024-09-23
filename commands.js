@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import { InstallGlobalCommands } from './utils.js';
 
+const GUILD_ONLY_INTEGRATION = [0];
+const GUILD_ONLY_CONTEXT = [0];
+
 const LOGIN_COMMAND = {
   name: 'login',
   description: 'Log in to Ride With GPS',
@@ -13,8 +16,8 @@ const ROUTE_COMMAND = {
   name: 'route',
   description: 'Displays information about a route',
   type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 1, 2],
+  integration_types: GUILD_ONLY_INTEGRATION,
+  contexts: GUILD_ONLY_CONTEXT,
   options: [
     {
       type: 3,
@@ -28,8 +31,8 @@ const ADD_ROUTE_COMMAND = {
   name: "add_route",
   description: "Adds an upcoming training route",
   type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 1, 2],
+  integration_types: GUILD_ONLY_INTEGRATION,
+  contexts: GUILD_ONLY_CONTEXT,
   options: [
     {
       type: 3,
@@ -50,16 +53,16 @@ const ALL_ROUTES_COMMAND = {
   name: "all_routes",
   description: "Lists all the routes in the database.",
   type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 1, 2],
+  integration_types: GUILD_ONLY_INTEGRATION,
+  contexts: GUILD_ONLY_CONTEXT,
 };
 
 const UNDO_COMMAND = {
   name: "undo",
   description: "Reverts the last admin command.",
   type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 1, 2],
+  integration_types: GUILD_ONLY_INTEGRATION,
+  contexts: GUILD_ONLY_CONTEXT, // Guild only
 };
 
 const ALL_COMMANDS = [ROUTE_COMMAND, ADD_ROUTE_COMMAND, ALL_ROUTES_COMMAND, UNDO_COMMAND];
